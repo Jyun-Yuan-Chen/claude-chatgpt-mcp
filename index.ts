@@ -8,6 +8,26 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { runAppleScript } from 'run-applescript';
 import { run } from '@jxa/run';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// 獲取當前檔案的目錄路徑
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const logFilePath = path.join(__dirname, 'log.txt');
+
+// 自定義日誌函數，只將訊息寫入檔案而不輸出到標準輸出（避免破壞 JSON 協議）
+function logMessage(message: string, isError = false): void {
+  const timestamp = new Date().toISOString();
+  const logEntry = `[${timestamp}] ${message}\n`;
+  
+  // 寫入日誌檔案
+  fs.appendFileSync(logFilePath, logEntry);
+  
+  // 不再使用標準輸出，避免干擾 MCP 協議
+  // 如果需要本地除錯，請使用其他渠道如檔案或系統日誌
+}
 
 // 定義 ChatGPT 工具
 // 這個工具允許透過 MCP 協議與 macOS 上的 ChatGPT 桌面應用程式互動
@@ -59,7 +79,7 @@ async function checkChatGPTAccess(): Promise<boolean> {
     `);
 
     if (isRunning !== "true") {
-      console.log("ChatGPT 應用程式尚未執行，嘗試啟動中...");
+      logMessage("ChatGPT 應用程式尚未執行，嘗試啟動中...");
       try {
         // 啟動 ChatGPT 應用程式
         await runAppleScript(`
@@ -67,14 +87,14 @@ async function checkChatGPTAccess(): Promise<boolean> {
           delay 2
         `);
       } catch (activateError) {
-        console.error("啟動 ChatGPT 應用程式時發生錯誤:", activateError);
+        logMessage("啟動 ChatGPT 應用程式時發生錯誤: " + activateError, true);
         throw new Error("無法啟動 ChatGPT 應用程式。請手動啟動。");
       }
     }
     
     return true;
   } catch (error) {
-    console.error("ChatGPT 訪問檢查失敗:", error);
+    logMessage("ChatGPT 訪問檢查失敗: " + error, true);
     throw new Error(
       `無法訪問 ChatGPT 應用程式。請確保 ChatGPT 已安裝並正確配置。錯誤: ${error instanceof Error ? error.message : String(error)}`
     );
@@ -124,7 +144,7 @@ async function askChatGPT(prompt: string, conversationId?: string): Promise<stri
     
     return result;
   } catch (error) {
-    console.error("與 ChatGPT 互動時發生錯誤:", error);
+    logMessage("與 ChatGPT 互動時發生錯誤: " + error, true);
     throw new Error(`無法從 ChatGPT 獲取回應: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
@@ -166,7 +186,7 @@ async function getConversations(): Promise<string[]> {
     const conversations = result.split(", ");
     return conversations;
   } catch (error) {
-    console.error("獲取 ChatGPT 對話時發生錯誤:", error);
+    logMessage("獲取 ChatGPT 對話時發生錯誤: " + error, true);
     return ["獲取對話時發生錯誤"];
   }
 }
@@ -270,4 +290,4 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 // 建立標準輸入輸出伺服器傳輸
 const transport = new StdioServerTransport();
 await server.connect(transport);
-console.error("ChatGPT MCP 伺服器正在標準輸入輸出上運行");
+logMessage("ChatGPT MCP 伺服器正在標準輸入輸出上運行");
