@@ -1,23 +1,30 @@
-# Claude ChatGPT MCP Tool
+# ChatGPT MCP 工具
+* 修改支援中文
+* 中文註解
+* 但仍無法從ChatGPT取得回應
+* 本次修改幾乎由 Github Copilot 修改.
+
+以下原作者的 readme
+## Claude ChatGPT MCP Tool
 
 This is a Model Context Protocol (MCP) tool that allows Claude to interact with the ChatGPT desktop app on macOS.
 
-## Features
+### Features
 
 - Ask ChatGPT questions directly from Claude
 - View ChatGPT conversation history
 - Continue existing ChatGPT conversations
 
-## Installation
+### Installation
 
-### Prerequisites
+#### Prerequisites
 
 - macOS with M1/M2/M3 chip
 - [ChatGPT desktop app](https://chatgpt.com/download) installed
 - [Bun](https://bun.sh/) installed
 - [Claude desktop app](https://claude.ai/desktop) installed
 
-### Installation Steps
+#### Installation Steps
 
 1. Clone this repository:
 
@@ -58,7 +65,7 @@ Make sure to replace `YOURUSERNAME` with your actual macOS username and adjust t
    - Give Terminal (or iTerm) access to Accessibility features
    - You may see permission prompts when the tool is first used
 
-## Usage
+### Usage
 
 Once installed, you can use the ChatGPT tool directly from Claude by asking questions like:
 
@@ -66,7 +73,7 @@ Once installed, you can use the ChatGPT tool directly from Claude by asking ques
 - "Show me my recent ChatGPT conversations"
 - "Ask ChatGPT to explain quantum computing"
 
-## Troubleshooting
+### Troubleshooting
 
 If the tool isn't working properly:
 
@@ -75,6 +82,6 @@ If the tool isn't working properly:
 3. Check that you've granted all necessary permissions
 4. Try restarting both Claude and ChatGPT apps
 
-## License
+### License
 
 MIT

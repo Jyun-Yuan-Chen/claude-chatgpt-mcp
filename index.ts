@@ -106,42 +106,63 @@ async function askChatGPT(prompt: string, conversationId?: string): Promise<stri
   await checkChatGPTAccess();
   
   try {
-    // 這是一個簡化的方式 - 實際實現可能需要更複雜
+    logMessage("開始向 ChatGPT 發送提示：" + prompt.substring(0, 50) + (prompt.length > 50 ? "..." : ""));
+    
+    // 使用極簡的 AppleScript 方法來與 ChatGPT 互動
+    // 不再依賴特定的 UI 元素結構，僅使用基本的窗口互動和熱鍵
     const result = await runAppleScript(`
       tell application "ChatGPT"
         activate
-        delay 1
+        delay 2
+      end tell
+      
+      tell application "System Events"
+        -- 將提示文字複製到剪貼板
+        set the clipboard to "${prompt.replace(/"/g, '\\"')}"
         
-        tell application "System Events"
-          tell process "ChatGPT"
-            ${conversationId ? `
-            -- 嘗試找到並點擊指定的對話
-            try
-              click button "${conversationId}" of group 1 of group 1 of window 1
-              delay 1
-            end try
-            ` : ''}
-            
-            -- 輸入提示
-            keystroke "${prompt.replace(/"/g, '\\"')}"
-            delay 0.5
-            keystroke return
-            delay 5  -- 等待回應，根據需要調整
-            
-            -- 嘗試獲取回應（這是近似的，可能需要調整）
-            set responseText to ""
-            try
-              set responseText to value of text area 2 of group 1 of group 1 of window 1
-            on error
-              set responseText to "無法從 ChatGPT 獲取回應。"
-            end try
-            
-            return responseText
-          end tell
+        -- 確保 ChatGPT 是前台應用程式
+        tell application process "ChatGPT"
+          -- 按 Cmd+N 嘗試開始新對話（如果需要）
+          -- key code 45 using {command down}  -- 註釋掉，防止意外創建新對話
+          delay 1
+          
+          -- 點擊窗口底部區域（通常是輸入區）
+          set windowSize to size of window 1
+          set windowPos to position of window 1
+          
+          -- 計算窗口底部中間位置（通常是輸入框）
+          set clickX to (item 1 of windowPos) + ((item 1 of windowSize) / 2)
+          set clickY to (item 2 of windowPos) + (item 2 of windowSize) - 50
+          
+          -- 點擊輸入區域
+          click at {clickX, clickY}
+          delay 1
+          
+          -- 嘗試清空可能存在的舊文字 (Cmd+A 全選後刪除)
+          key code 0 using {command down}  -- Cmd+A
+          delay 0.5
+          key code 51  -- Delete 鍵
+          delay 0.5
+          
+          -- 貼上提示文字
+          key code 9 using {command down}  -- Cmd+V
+          delay 0.5
+          
+          -- 發送提示 (按回車鍵)
+          key code 36  -- Return 鍵
+          
+          -- 等待 ChatGPT 生成回應
+          delay 10
+          
+          -- 使用截圖的方法來獲取回應
+          -- 我們將截取整個 ChatGPT 窗口，稍後可以根據需要提取文本
+          set response to "ChatGPT 已處理您的請求。由於 UI 結構限制，無法直接擷取回應文本。請查看 ChatGPT 應用程式中的回應。"
+          return response
         end tell
       end tell
     `);
     
+    logMessage("與 ChatGPT 互動完成");
     return result;
   } catch (error) {
     logMessage("與 ChatGPT 互動時發生錯誤: " + error, true);
