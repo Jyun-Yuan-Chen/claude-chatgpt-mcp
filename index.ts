@@ -9,31 +9,33 @@ import {
 import { runAppleScript } from 'run-applescript';
 import { run } from '@jxa/run';
 
-// Define the ChatGPT tool
+// 定義 ChatGPT 工具
+// 這個工具允許透過 MCP 協議與 macOS 上的 ChatGPT 桌面應用程式互動
 const CHATGPT_TOOL: Tool = {
   name: "chatgpt",
-  description: "Interact with the ChatGPT desktop app on macOS",
+  description: "Interact with the ChatGPT desktop app on macOS", // 與 macOS 上的 ChatGPT 桌面應用程式互動
   inputSchema: {
     type: "object",
     properties: {
       operation: {
         type: "string",
-        description: "Operation to perform: 'ask' or 'get_conversations'",
+        description: "Operation to perform: 'ask' or 'get_conversations'", // 要執行的操作：「詢問」或「獲取對話」
         enum: ["ask", "get_conversations"]
       },
       prompt: {
         type: "string",
-        description: "The prompt to send to ChatGPT (required for ask operation)"
+        description: "The prompt to send to ChatGPT (required for ask operation)" // 發送給 ChatGPT 的提示（詢問操作時必需）
       },
       conversation_id: {
         type: "string",
-        description: "Optional conversation ID to continue a specific conversation"
+        description: "Optional conversation ID to continue a specific conversation" // 可選的對話 ID，用於繼續特定對話
       }
     },
     required: ["operation"]
   }
 };
 
+// 建立 MCP 伺服器實例
 const server = new Server(
   {
     name: "ChatGPT MCP Tool",
@@ -46,9 +48,10 @@ const server = new Server(
   }
 );
 
-// Check if ChatGPT app is installed and running
+// 檢查 ChatGPT 應用程式是否已安裝並正在運行
 async function checkChatGPTAccess(): Promise<boolean> {
   try {
+    // 使用 AppleScript 檢查 ChatGPT 進程是否存在
     const isRunning = await runAppleScript(`
       tell application "System Events"
         return application process "ChatGPT" exists
@@ -56,33 +59,34 @@ async function checkChatGPTAccess(): Promise<boolean> {
     `);
 
     if (isRunning !== "true") {
-      console.log("ChatGPT app is not running, attempting to launch...");
+      console.log("ChatGPT 應用程式尚未執行，嘗試啟動中...");
       try {
+        // 啟動 ChatGPT 應用程式
         await runAppleScript(`
           tell application "ChatGPT" to activate
           delay 2
         `);
       } catch (activateError) {
-        console.error("Error activating ChatGPT app:", activateError);
-        throw new Error("Could not activate ChatGPT app. Please start it manually.");
+        console.error("啟動 ChatGPT 應用程式時發生錯誤:", activateError);
+        throw new Error("無法啟動 ChatGPT 應用程式。請手動啟動。");
       }
     }
     
     return true;
   } catch (error) {
-    console.error("ChatGPT access check failed:", error);
+    console.error("ChatGPT 訪問檢查失敗:", error);
     throw new Error(
-      `Cannot access ChatGPT app. Please make sure ChatGPT is installed and properly configured. Error: ${error instanceof Error ? error.message : String(error)}`
+      `無法訪問 ChatGPT 應用程式。請確保 ChatGPT 已安裝並正確配置。錯誤: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 }
 
-// Function to send a prompt to ChatGPT
+// 發送提示給 ChatGPT 的函數
 async function askChatGPT(prompt: string, conversationId?: string): Promise<string> {
   await checkChatGPTAccess();
   
   try {
-    // This is a simplistic approach - actual implementation may need to be more sophisticated
+    // 這是一個簡化的方式 - 實際實現可能需要更複雜
     const result = await runAppleScript(`
       tell application "ChatGPT"
         activate
@@ -91,25 +95,25 @@ async function askChatGPT(prompt: string, conversationId?: string): Promise<stri
         tell application "System Events"
           tell process "ChatGPT"
             ${conversationId ? `
-            -- Try to find and click the specified conversation
+            -- 嘗試找到並點擊指定的對話
             try
               click button "${conversationId}" of group 1 of group 1 of window 1
               delay 1
             end try
             ` : ''}
             
-            -- Type in the prompt
+            -- 輸入提示
             keystroke "${prompt.replace(/"/g, '\\"')}"
             delay 0.5
             keystroke return
-            delay 5  -- Wait for response, adjust as needed
+            delay 5  -- 等待回應，根據需要調整
             
-            -- Try to get the response (this is approximate and may need adjustments)
+            -- 嘗試獲取回應（這是近似的，可能需要調整）
             set responseText to ""
             try
               set responseText to value of text area 2 of group 1 of group 1 of window 1
             on error
-              set responseText to "Could not retrieve the response from ChatGPT."
+              set responseText to "無法從 ChatGPT 獲取回應。"
             end try
             
             return responseText
@@ -120,12 +124,12 @@ async function askChatGPT(prompt: string, conversationId?: string): Promise<stri
     
     return result;
   } catch (error) {
-    console.error("Error interacting with ChatGPT:", error);
-    throw new Error(`Failed to get response from ChatGPT: ${error instanceof Error ? error.message : String(error)}`);
+    console.error("與 ChatGPT 互動時發生錯誤:", error);
+    throw new Error(`無法從 ChatGPT 獲取回應: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
-// Function to get available conversations
+// 獲取可用對話的函數
 async function getConversations(): Promise<string[]> {
   await checkChatGPTAccess();
   
@@ -137,7 +141,7 @@ async function getConversations(): Promise<string[]> {
         
         tell application "System Events"
           tell process "ChatGPT"
-            -- Try to get conversation titles
+            -- 嘗試獲取對話標題
             set conversationsList to {}
             
             try
@@ -149,7 +153,7 @@ async function getConversations(): Promise<string[]> {
                 end if
               end repeat
             on error
-              set conversationsList to {"Unable to retrieve conversations"}
+              set conversationsList to {"無法獲取對話"}
             end try
             
             return conversationsList
@@ -158,15 +162,16 @@ async function getConversations(): Promise<string[]> {
       end tell
     `);
     
-    // Parse the AppleScript result into an array
+    // 將 AppleScript 結果解析為數組
     const conversations = result.split(", ");
     return conversations;
   } catch (error) {
-    console.error("Error getting ChatGPT conversations:", error);
-    return ["Error retrieving conversations"];
+    console.error("獲取 ChatGPT 對話時發生錯誤:", error);
+    return ["獲取對話時發生錯誤"];
   }
 }
 
+// 檢查是否為 ChatGPT 的有效參數
 function isChatGPTArgs(args: unknown): args is {
   operation: "ask" | "get_conversations";
   prompt?: string;
@@ -180,37 +185,39 @@ function isChatGPTArgs(args: unknown): args is {
     return false;
   }
   
-  // Validate required fields based on operation
+  // 根據操作驗證必需字段
   if (operation === "ask" && !prompt) return false;
   
-  // Validate field types if present
+  // 驗證字段類型（如果存在）
   if (prompt && typeof prompt !== "string") return false;
   if (conversation_id && typeof conversation_id !== "string") return false;
   
   return true;
 }
 
+// 設置工具列表請求處理器
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [CHATGPT_TOOL],
 }));
 
+// 設置工具調用請求處理器
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     const { name, arguments: args } = request.params;
 
     if (!args) {
-      throw new Error("No arguments provided");
+      throw new Error("未提供參數");
     }
 
     if (name === "chatgpt") {
       if (!isChatGPTArgs(args)) {
-        throw new Error("Invalid arguments for ChatGPT tool");
+        throw new Error("ChatGPT 工具的參數無效");
       }
 
       switch (args.operation) {
         case "ask": {
           if (!args.prompt) {
-            throw new Error("Prompt is required for ask operation");
+            throw new Error("詢問操作需要提供提示");
           }
           
           const response = await askChatGPT(args.prompt, args.conversation_id);
@@ -218,7 +225,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           return {
             content: [{ 
               type: "text", 
-              text: response || "No response received from ChatGPT."
+              text: response || "未收到 ChatGPT 的回應。"
             }],
             isError: false
           };
@@ -231,20 +238,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             content: [{ 
               type: "text", 
               text: conversations.length > 0 ? 
-                `Found ${conversations.length} conversation(s):\n\n${conversations.join("\n")}` :
-                "No conversations found in ChatGPT."
+                `找到 ${conversations.length} 個對話:\n\n${conversations.join("\n")}` :
+                "ChatGPT 中未找到任何對話。"
             }],
             isError: false
           };
         }
 
         default:
-          throw new Error(`Unknown operation: ${args.operation}`);
+          throw new Error(`未知操作: ${args.operation}`);
       }
     }
 
     return {
-      content: [{ type: "text", text: `Unknown tool: ${name}` }],
+      content: [{ type: "text", text: `未知工具: ${name}` }],
       isError: true,
     };
   } catch (error) {
@@ -252,7 +259,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       content: [
         {
           type: "text",
-          text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+          text: `錯誤: ${error instanceof Error ? error.message : String(error)}`,
         },
       ],
       isError: true,
@@ -260,6 +267,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 });
 
+// 建立標準輸入輸出伺服器傳輸
 const transport = new StdioServerTransport();
 await server.connect(transport);
-console.error("ChatGPT MCP Server running on stdio");
+console.error("ChatGPT MCP 伺服器正在標準輸入輸出上運行");
